@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "my-app",
+    "name": "SpotBell",
     "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,10 +20,17 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.shivr7.myapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c4d30b5f-f9a4-46ec-b2ad-c58f9595bb10"
+      }
+    },
+    "owner": "shivr7"
   }
 }
