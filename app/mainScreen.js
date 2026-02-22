@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
+import { PROVIDER_GOOGLE } from "react-native-maps";
 import {
   StyleSheet,
   View,
   Text,
   TextInput,
-  Button,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
-  Keyboard
+  TouchableOpacity,
+  Keyboard,
 } from "react-native";
 import MapView, { Polyline, Marker } from "react-native-maps";
 import * as Location from "expo-location";
@@ -25,6 +26,22 @@ export default function MainScreen() {
   const [routeCoords, setRouteCoords] = useState([]);
   const lastFetchLocation = useRef(null);
   const [destination, setDestination] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const customMapStyle = [
+    { elementType: "geometry", stylers: [{ color: "#1d1d1d" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#8e8e93" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#1d1d1d" }] },
+    {
+      featureType: "road",
+      elementType: "geometry",
+      stylers: [{ color: "#2c2c2c" }],
+    },
+    {
+      featureType: "water",
+      elementType: "geometry",
+      stylers: [{ color: "#0e0e0e" }],
+    },
+  ];
 
   useEffect(() => {
     //Permission for alarms
@@ -173,60 +190,84 @@ export default function MainScreen() {
         style={styles.inputWrapper}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.inputContainer}>
-            <Text>Destination Latitude:</Text>
-            <TextInput
-              style={styles.input}
-              value={latitudeInput}
-              onChangeText={setLatitudeInput}
-              keyboardType="numeric"
-            />
-            <Text>Destination Longitude:</Text>
-            <TextInput
-              style={styles.input}
-              value={longitudeInput}
-              onChangeText={setLongitudeInput}
-              keyboardType="numeric"
-            />
-            <Text>WakeUp Distance(km):</Text>
-            <TextInput
-              style={styles.input}
-              value={wakeupInput}
-              onChangeText={setWakeupInput}
-              keyboardType="numeric"
-            />
-            <Button
-              title="Set Destination"
-              onPress={() => {
-                const lat = parseFloat(latitudeInput);
-                const lon = parseFloat(longitudeInput);
-                const wakeupDistance = parseFloat(wakeupInput);
-                if (
-                  wakeupDistance < 1 ||
-                  wakeupDistance > 20 ||
-                  isNaN(wakeupDistance)
-                ) {
-                  alert("Wakeup Distance must be between 1 and 20 km");
-                  return;
-                }
-                if (!isNaN(lat) && !isNaN(lon)) {
-                  setRouteCoords([]);
-                  setAlarmTriggered(false);
-                  lastFetchLocation.current = null;
-                  setDestination({ latitude: lat, longitude: lon });
-                  mapRef.current?.animateCamera({
-                    center: { latitude: lat, longitude: lon },
-                    zoom: 14,
-                  });
-                  Keyboard.dismiss();
-                } else alert("Please enter valid numbers");
-              }}
-            />
+          <View
+            style={[
+              styles.inputContainer,
+              collapsed && styles.inputContainerCollapsed,
+            ]}
+          >
+            {!collapsed && (
+              <>
+                <Text style={styles.label}>Destination Latitude:</Text>
+                <TextInput
+                  style={styles.input}
+                  value={latitudeInput}
+                  onChangeText={setLatitudeInput}
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.label}>Destination Longitude:</Text>
+                <TextInput
+                  style={styles.input}
+                  value={longitudeInput}
+                  onChangeText={setLongitudeInput}
+                  keyboardType="numeric"
+                />
+
+                <Text style={styles.label}>WakeUp Distance(km):</Text>
+                <TextInput
+                  style={styles.input}
+                  value={wakeupInput}
+                  onChangeText={setWakeupInput}
+                  keyboardType="numeric"
+                />
+
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => {
+                    const lat = parseFloat(latitudeInput);
+                    const lon = parseFloat(longitudeInput);
+                    const wakeupDistance = parseFloat(wakeupInput);
+                    if (
+                      wakeupDistance < 1 ||
+                      wakeupDistance > 20 ||
+                      isNaN(wakeupDistance)
+                    ) {
+                      alert("Wakeup Distance must be between 1 and 20 km");
+                      return;
+                    }
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                      setRouteCoords([]);
+                      setAlarmTriggered(false);
+                      lastFetchLocation.current = null;
+                      setDestination({ latitude: lat, longitude: lon });
+                      mapRef.current?.animateCamera({
+                        center: { latitude: lat, longitude: lon },
+                        zoom: 14,
+                      });
+                      Keyboard.dismiss();
+                    } else {
+                      alert("Please enter valid numbers");
+                    }
+                  }}
+                >
+                  <Text style={styles.buttonText}>Set Destination</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.reduceButton}
+              onPress={() => setCollapsed(!collapsed)}
+            >
+              <Text style={styles.buttonArrow}>{collapsed ? "▼" : "▲"}</Text>
+            </TouchableOpacity>
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
 
       <MapView
+        provider={PROVIDER_GOOGLE}
         ref={mapRef}
         style={styles.map}
         initialRegion={{
@@ -235,9 +276,16 @@ export default function MainScreen() {
           latitudeDelta: 0.1,
           longitudeDelta: 0.1,
         }}
+        customMapStyle={customMapStyle}
+        moveOnMarkerPress={false}
       >
         {routeCoords.length > 0 && (
-          <Polyline coordinates={routeCoords} strokeWidth={2} />
+          <Polyline
+            coordinates={routeCoords}
+            strokeWidth={6}
+            strokeColor="#000000"
+            zIndex={10}
+          />
         )}
         {destination && (
           <Marker
@@ -245,6 +293,7 @@ export default function MainScreen() {
               latitude: destination.latitude,
               longitude: destination.longitude,
             }}
+            pinColor="#4c0703"
             title="Destination"
           />
         )}
@@ -255,6 +304,7 @@ export default function MainScreen() {
               longitude: location.longitude,
             }}
             title="Location"
+            pinColor="#00CFFF"
           />
         )}
       </MapView>
@@ -266,14 +316,61 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   inputContainer: {
-    marginTop: 50,
-    padding: 10,
+    position: "absolute",
+    top: 40,
+    left: 10,
+    right: 10,
+    padding: 15,
+    paddingBottom: 45,
+    backgroundColor: "rgba(1, 18, 62, 0.65)", // semi-transparent dark
+    borderRadius: 12,
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 5,
+    padding: 8,
     marginVertical: 5,
-    borderRadius: 5,
+    borderRadius: 8,
+    color: "white",
+  },
+  button: {
+    backgroundColor: "#4c0703",
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginVertical: 10,
+    alignItems: "center",
+  },
+
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  label: {
+    color: "white",
+  },
+  reduceButton: {
+    borderRadius: 10,
+    alignItems: "center",
+    width: 50,
+    position: "absolute",
+    right: 10,
+    bottom: 0,
+    transform: [{ translateY: -12 }],
+  },
+  buttonArrow: {
+    color: "white",
+    fontSize: 25,
+    fontWeight: "bold",
+  },
+  inputContainerCollapsed: {
+    height: 60,
+    padding: 10,
   },
 });

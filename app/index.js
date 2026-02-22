@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
-import { StyleSheet, View} from "react-native";
+import { StyleSheet, View, Text} from "react-native";
 import MainScreen from "./mainScreen"
 
 export default function LogoScreen() {
@@ -22,6 +22,7 @@ export default function LogoScreen() {
           style={styles.logo}
           contentFit="contain"
         />
+         
       </View>
     );
   }
@@ -31,7 +32,7 @@ export default function LogoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#5c00a8ff",
+    backgroundColor: "rgba(1, 18, 62, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   logo: {
-    width: 200,
-    height: 200,
+    width: 300,
+    height: 300,
   },
 });
