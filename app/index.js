@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
-import { StyleSheet, View, Text} from "react-native";
+import { StyleSheet, View, Text } from "react-native";
 import MainScreen from "./mainScreen"
 
 export default function LogoScreen() {
@@ -18,11 +18,11 @@ export default function LogoScreen() {
     return (
       <View style={styles.container}>
         <Image
-          source={require("../assets/Spot Bell Logo Design.png")}
+          source={require("../assets/icon.png")}
           style={styles.logo}
           contentFit="contain"
         />
-         
+
       </View>
     );
   }
@@ -32,7 +32,7 @@ export default function LogoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgba(1, 18, 62, 0.5)",
+    backgroundColor: "#01123E",
     justifyContent: "center",
     alignItems: "center",
   },
