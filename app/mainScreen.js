@@ -10,13 +10,14 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   TouchableOpacity,
-  Alert, Linking,
-  AppState
+  Alert,
+  Linking,
+  AppState,
 } from "react-native";
 import { LogBox } from "react-native";
 LogBox.ignoreLogs([
   "expo-av has been deprecated",
-  "Expo AV has been deprecated"
+  "Expo AV has been deprecated",
 ]);
 import MapView, { Polyline, Marker } from "react-native-maps";
 import * as Location from "expo-location";
@@ -33,6 +34,10 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const log = (...args) => {
+  if (__DEV__) console.log(...args);
+};
+
 const BACKGROUND_LOCATION_TASK = "BACKGROUND_LOCATION_TASK";
 let isRinging = false;
 let soundObject = null;
@@ -45,9 +50,9 @@ const getDistanceInMeters = (lat1, lon1, lat2, lon2) => {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) *
-    Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) *
-    Math.sin(dLon / 2);
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -59,11 +64,10 @@ const convertToMapCoords = (osrmCoords) => {
   }));
 };
 
-
 const playLoopingAlarm = async () => {
   //To play looping alarm
   if (soundObject) {
-    console.log("Audio already playing, skipping duplicate.");
+    log("Audio already playing, skipping duplicate.");
     return;
   }
 
@@ -77,12 +81,12 @@ const playLoopingAlarm = async () => {
 
     const { sound } = await Audio.Sound.createAsync(
       require("../assets/alarm.wav"),
-      { isLooping: true }
+      { isLooping: true },
     );
     soundObject = sound;
     await soundObject.playAsync();
   } catch (err) {
-    console.log("Error playing looping audio", err);
+    log("Error playing looping audio", err);
   }
 };
 
@@ -94,7 +98,7 @@ const stopLoopingAlarm = async () => {
       await soundObject.unloadAsync();
       soundObject = null;
     } catch (err) {
-      console.log("Error stopping looping audio", err);
+      log("Error stopping looping audio", err);
     }
   }
 };
@@ -104,14 +108,14 @@ const triggerAlarm = async () => {
   if (isRinging) return;
   isRinging = true;
 
-  //Cancel old notifications 
+  //Cancel old notifications
   try {
     const existingId = await AsyncStorage.getItem("alarm_notification_id");
     if (existingId) {
       await Notifications.cancelScheduledNotificationAsync(existingId);
     }
   } catch (e) {
-    console.log("Error clearing old alarm", e);
+    log("Error clearing old alarm", e);
   }
 
   await playLoopingAlarm();
@@ -123,7 +127,7 @@ const triggerAlarm = async () => {
       sound: "alarm.wav",
       priority: Notifications.AndroidNotificationPriority.MAX,
     },
-    trigger: null
+    trigger: null,
   });
   await AsyncStorage.setItem("alarm_notification_id", id);
 };
@@ -131,7 +135,7 @@ const triggerAlarm = async () => {
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   //Run as background task using task manager if app goes to background
   if (error) {
-    console.log("Background location error:", error);
+    log("Background location error:", error);
     return;
   }
   if (data) {
@@ -151,14 +155,17 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
           currentLocation.latitude,
           currentLocation.longitude,
           activeAlarm.destination.latitude,
-          activeAlarm.destination.longitude
+          activeAlarm.destination.longitude,
         );
 
         if (distanceToDestination <= activeAlarm.wakeupRadius * 1000) {
           if (isRinging) return;
 
           activeAlarm.triggered = true;
-          await AsyncStorage.setItem("active_alarm", JSON.stringify(activeAlarm));
+          await AsyncStorage.setItem(
+            "active_alarm",
+            JSON.stringify(activeAlarm),
+          );
 
           await triggerAlarm();
 
@@ -166,12 +173,12 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
           try {
             await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
           } catch (e) {
-            console.log("Task stop error:", e);
+            log("Task stop error:", e);
           }
         }
       }
     } catch (err) {
-      console.log("Error processing background location logic:", err);
+      log("Error processing background location logic:", err);
     }
   }
 });
@@ -215,8 +222,8 @@ export default function MainScreen() {
           "SpotBell needs location permission to calculate your route and wake you up.",
           [
             { text: "Cancel", style: "cancel" },
-            { text: "Open Settings", onPress: () => Linking.openSettings() }
-          ]
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ],
         );
         return;
       }
@@ -228,8 +235,8 @@ export default function MainScreen() {
           "SpotBell must have 'Always' location access to wake you up effectively when your phone is locked.",
           [
             { text: "Continue anyway", style: "cancel" },
-            { text: "Open Settings", onPress: () => Linking.openSettings() }
-          ]
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ],
         );
       }
 
@@ -260,9 +267,8 @@ export default function MainScreen() {
             });
           },
         );
-      }
-      catch (e) {
-        console.log("Location setup error:", e);
+      } catch (e) {
+        log("Location setup error:", e);
       }
     })();
     return () => {
@@ -274,23 +280,26 @@ export default function MainScreen() {
   }, []);
 
   useEffect(() => {
-    //If app triggered alarm in background, update UI accordingly 
-    const subscription = AppState.addEventListener("change", async (nextAppState) => {
-      if (nextAppState === "active") {
-        try {
-          const activeAlarmStr = await AsyncStorage.getItem("active_alarm");
-          if (activeAlarmStr) {
-            const activeAlarm = JSON.parse(activeAlarmStr);
-            if (activeAlarm.triggered) {
-              setAlarmTriggered(true);
-              isRinging = true;
+    //If app triggered alarm in background, update UI accordingly
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        if (nextAppState === "active") {
+          try {
+            const activeAlarmStr = await AsyncStorage.getItem("active_alarm");
+            if (activeAlarmStr) {
+              const activeAlarm = JSON.parse(activeAlarmStr);
+              if (activeAlarm.triggered) {
+                setAlarmTriggered(true);
+                isRinging = true;
+              }
             }
+          } catch (err) {
+            log(err);
           }
-        } catch (err) {
-          console.log(err);
         }
-      }
-    });
+      },
+    );
 
     return () => {
       subscription.remove();
@@ -299,10 +308,12 @@ export default function MainScreen() {
 
   useEffect(() => {
     //Listen for foreground notifications
-    const foregroundNotifSub = Notifications.addNotificationReceivedListener(notification => {
-      setAlarmTriggered(true);
-      isRinging = true;
-    });
+    const foregroundNotifSub = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        setAlarmTriggered(true);
+        isRinging = true;
+      },
+    );
 
     return () => {
       foregroundNotifSub.remove();
@@ -337,18 +348,23 @@ export default function MainScreen() {
         if (activeAlarmStr) {
           const activeAlarm = JSON.parse(activeAlarmStr);
           activeAlarm.triggered = true;
-          await AsyncStorage.setItem("active_alarm", JSON.stringify(activeAlarm));
+          await AsyncStorage.setItem(
+            "active_alarm",
+            JSON.stringify(activeAlarm),
+          );
         }
 
         if (!isRinging) {
           await triggerAlarm();
         }
 
-        Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).then(started => {
-          if (started) {
-            Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-          }
-        });
+        Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK).then(
+          (started) => {
+            if (started) {
+              Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+            }
+          },
+        );
       }
 
       const last = lastFetchLocation.current;
@@ -370,7 +386,7 @@ export default function MainScreen() {
   const fetchAndStoreRoute = async () => {
     const osrmGeometry = await fetchRoute(location, destination);
     if (!osrmGeometry) {
-      console.log("Failed to fetch route geometry");
+      log("Failed to fetch route geometry");
       return;
     }
     const coords = convertToMapCoords(osrmGeometry);
@@ -390,7 +406,7 @@ export default function MainScreen() {
       if (!data.routes?.length) return null;
       return data.routes[0].geometry.coordinates;
     } catch (e) {
-      console.log("Error fetching route:", e);
+      log("Error fetching route:", e);
       return null;
     }
   };
@@ -407,16 +423,18 @@ export default function MainScreen() {
       }
       await Notifications.dismissAllNotificationsAsync();
     } catch (e) {
-      console.log("Error dismissing notifications:", e);
+      log("Error dismissing notifications:", e);
     }
 
     try {
-      const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      const hasStarted = await Location.hasStartedLocationUpdatesAsync(
+        BACKGROUND_LOCATION_TASK,
+      );
       if (hasStarted) {
         await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
       }
     } catch (e) {
-      console.log("Error stopping background location:", e);
+      log("Error stopping background location:", e);
     }
 
     // Mark the journey as complete by clearing the destination
@@ -434,7 +452,7 @@ export default function MainScreen() {
     const wakeupDistance = parseFloat(wakeupInput);
 
     if (wakeupDistance < 1 || wakeupDistance > 20 || isNaN(wakeupDistance)) {
-      alert("Wakeup Distance must be between 1 and 20 km");
+      Alert.alert("Wakeup Distance must be between 1 and 20 km");
       return;
     }
 
@@ -462,14 +480,19 @@ export default function MainScreen() {
       Keyboard.dismiss();
 
       // Store the active alarm context for the Background Task to read
-      await AsyncStorage.setItem("active_alarm", JSON.stringify({
-        destination: newDestination,
-        wakeupRadius: wakeupDistance,
-        triggered: false
-      }));
+      await AsyncStorage.setItem(
+        "active_alarm",
+        JSON.stringify({
+          destination: newDestination,
+          wakeupRadius: wakeupDistance,
+          triggered: false,
+        }),
+      );
 
       // Tell iOS to start tracking us in the background
-      const hasStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      const hasStarted = await Location.hasStartedLocationUpdatesAsync(
+        BACKGROUND_LOCATION_TASK,
+      );
       if (hasStarted) {
         await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
       }
@@ -480,18 +503,17 @@ export default function MainScreen() {
         foregroundService: {
           notificationTitle: "SpotBell is active",
           notificationBody: "Tracking your train progress...",
-        }
+        },
       });
-
     } else {
-      alert("Please enter valid numbers");
+      Alert.alert("Please enter valid numbers");
     }
   };
 
   return (
     <View style={styles.container}>
       <MapView
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
         ref={mapRef}
         style={styles.map}
         initialRegion={{
@@ -577,13 +599,8 @@ export default function MainScreen() {
                   <Text style={styles.buttonText}>Set Destination</Text>
                 </TouchableOpacity>
                 {alarmTriggered && (
-                  <TouchableOpacity
-                    style={styles.button}
-                    onPress={stopAlarm}
-                  >
-                    <Text style={styles.buttonText}>
-                      Stop Alarm
-                    </Text>
+                  <TouchableOpacity style={styles.button} onPress={stopAlarm}>
+                    <Text style={styles.buttonText}>Stop Alarm</Text>
                   </TouchableOpacity>
                 )}
               </>
@@ -598,7 +615,6 @@ export default function MainScreen() {
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-
     </View>
   );
 }
